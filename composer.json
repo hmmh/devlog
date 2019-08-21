@@ -1,5 +1,5 @@
 {
-	"name": "devlog/devlog",
+	"name": "hmmh/devlog",
 	"type": "typo3-cms-extension",
 	"description": "The Developer's Log extension provides development logging/debugging functionality for usage of GeneralUtility::devlog() and a BE module to browse the logs.",
 	"license": [
@@ -16,9 +16,8 @@
 			"Devlog\\Devlog\\": "Classes/"
 		}
 	},
-	"version": "3.0.4",
 	"require": {
-		"typo3/cms-core": ">=7.6.0,<9.0"
+		"typo3/cms-core": ">=7.6.0,<10.0"
 	},
 	"replace": {
 		"devlog": "self.version",

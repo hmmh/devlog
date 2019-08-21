@@ -14,16 +14,20 @@ namespace Devlog\Devlog\Controller;
  * The TYPO3 project - inspiring people to share!
  */
 
-use TYPO3\CMS\Core\Utility\GeneralUtility;
+use Psr\Log\LoggerAwareInterface;
 use TYPO3\CMS\Extbase\Mvc\Controller\ActionController;
+use Psr\Log\LoggerAwareTrait;
 
 /**
  * Dummy plugin controller, which generates test devlog entries.
  *
  * @package Devlog\Devlog\Controller
  */
-class TestPluginController extends ActionController
+class TestPluginController extends ActionController implements LoggerAwareInterface
 {
+
+    use LoggerAwareTrait;
+
     /**
      * Writes log entries and outputs confirmation sentence.
      *
@@ -31,16 +35,20 @@ class TestPluginController extends ActionController
      */
     public function indexAction()
     {
-        GeneralUtility::devLog('Empty data', 'devlog', 1);
-        GeneralUtility::devLog('Logging object test', 'devlog', 0, $this);
-        GeneralUtility::devLog('Logging test', 'devlog', -1, $this->settings);
-        GeneralUtility::devLog('Logging test', 'devlog', 0, $this->settings);
-        GeneralUtility::devLog('Logging test', 'devlog', 1, $this->settings);
-        GeneralUtility::devLog('Logging test', 'devlog', 2, $this->settings);
-        GeneralUtility::devLog('Logging test', 'devlog', 3, $this->settings);
-        GeneralUtility::devLog('Escaping>=special "characters"', 'devlog', 1, 'Special characters: < > & " \'');
+        $this->logger->emergency('Emergency test');
+        $this->logger->alert('Alert test');
+        $this->logger->critical('Critical test');
+        $this->logger->error('Error test');
+        $this->logger->warning('Warning test');
+        $this->logger->notice('Notice test');
+        $this->logger->info('Info test');
+        $this->logger->debug('Debug test');
+
+        $this->logger->warning('Escaping>=special "characters"', ['Special characters: < > & " \'']);
+        $this->logger->warning('Logging object test', [$this]);
+
         $htmlObject = new \stdClass();
         $htmlObject->html = '<p>This is some HTML content, with <strong>wrong</strong> markups.</td></p>';
-        GeneralUtility::devLog('Logging <strong>HTML</strong>', '<b>devlog</b>', 3, $htmlObject);
+        $this->logger->warning('Logging <strong>HTML</strong>', [$htmlObject]);
     }
 }

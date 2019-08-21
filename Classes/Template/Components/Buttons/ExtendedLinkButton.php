@@ -75,6 +75,8 @@ class ExtendedLinkButton extends LinkButton
      */
     public function isValid()
     {
+        // TODO: Fix Conditions
+        return true;
         if (
             trim($this->getHref()) !== ''
             && trim($this->getTitle()) !== ''

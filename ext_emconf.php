@@ -26,10 +26,10 @@ $EM_CONF[$_EXTKEY] = [
         'author' => 'Francois Suter',
         'author_email' => 'typo3@cobweb.ch',
         'author_company' => '',
-        'version' => '3.0.4',
+        'version' => '4.0.0',
         'constraints' => [
                 'depends' => [
-                        'typo3' => '7.6.0-8.9.99',
+                        'typo3' => '7.6.0-9.9.99',
                 ],
                 'conflicts' => [
                 ],

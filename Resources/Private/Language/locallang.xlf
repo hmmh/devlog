@@ -34,7 +34,7 @@
 				<source>Severity</source>
 			</trans-unit>
 			<trans-unit id="extensionKey" xml:space="preserve">
-				<source>Key (extension, class, ...)</source>
+				<source>Key</source>
 			</trans-unit>
 			<trans-unit id="key" xml:space="preserve">
 				<source>Key</source>

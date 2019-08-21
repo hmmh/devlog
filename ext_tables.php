@@ -34,14 +34,6 @@ if (TYPO3_MODE === 'BE') {
     );
 }
 
-// Register test plugin
-\TYPO3\CMS\Extbase\Utility\ExtensionUtility::registerPlugin(
-        $_EXTKEY,
-        'TestPlugin',
-        'LLL:EXT:' . $_EXTKEY . '/Resources/Private/Language/locallang.xlf:test_plugin',
-        'EXT:' . $_EXTKEY . '/Resources/Public/Images/ModuleIcon.svg'
-);
-
 // Register sprite icons for loading spinner
 /** @var \TYPO3\CMS\Core\Imaging\IconRegistry $iconRegistry */
 $iconRegistry = \TYPO3\CMS\Core\Utility\GeneralUtility::makeInstance(\TYPO3\CMS\Core\Imaging\IconRegistry::class);
