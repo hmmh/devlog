@@ -282,7 +282,6 @@ class ListModuleController extends ActionController
      */
     public function getNewAction(ServerRequestInterface $request): ResponseInterface
     {
-        die();
         $this->initializeForAjaxAction();
         $requestParameters = $request->getQueryParams();
 
