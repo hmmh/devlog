@@ -58,16 +58,7 @@ class FileWriter extends AbstractWriter
             $absoluteFilePath,
             'ab'
         );
-        // Throw an exception if log file could not be opened properly
-        if (!$this->fileHandle) {
-            throw new \UnexpectedValueException(
-                sprintf(
-                    'Log file %s could not be opened.',
-                    $configuration->getLogFilePath()
-                ),
-                1416486470
-            );
-        }
+
     }
 
     /**
@@ -87,6 +78,10 @@ class FileWriter extends AbstractWriter
      */
     public function writeLog(LogRecord $record)
     {
+        if (!$this->fileHandle) {
+            return $this;
+        }
+
         if ($entry = $this->logger->getEntry($record)) {
             $logLine = '';
             $logLine .= date('c', $entry->getCrdate());

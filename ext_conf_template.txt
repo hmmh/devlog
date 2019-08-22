@@ -31,4 +31,4 @@ maximumRows = 1000
 maximumExtraDataSize = 1000000
 
 # cat=filewriter//; type=string; label=LLL:EXT:devlog/Resources/Private/Language/Configuration.xlf:log_file_path
-logFilePath =
+logFilePath = typo3temp/var/devlog.log
