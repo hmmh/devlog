@@ -36,6 +36,7 @@ return array(
                         'label' => 'LLL:EXT:devlog/Resources/Private/Language/locallang_db.xlf:tx_devlog_domain_model_entry.crdate',
                         'config' => array(
                                 'type' => 'input',
+                                'renderType' => 'inputDateTime',
                                 'readOnly' => true,
                                 'eval' => 'datetime'
                         )
@@ -45,6 +46,7 @@ return array(
                         'label' => 'LLL:EXT:devlog/Resources/Private/Language/locallang_db.xlf:tx_devlog_domain_model_entry.cruser_id',
                         'config' => array(
                                 'type' => 'select',
+                                'renderType' => 'selectSingle',
                                 'readOnly' => true,
                                 'items' => array(
                                         array()

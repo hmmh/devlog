@@ -1,4 +1,5 @@
 <?php
+
 namespace Devlog\Devlog\Writer;
 
 /**
@@ -15,6 +16,8 @@ namespace Devlog\Devlog\Writer;
  */
 
 use Devlog\Devlog\Utility\Logger;
+use TYPO3\CMS\Core\Log\LogRecord;
+use TYPO3\CMS\Core\Log\Writer\AbstractWriter;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
@@ -22,6 +25,12 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
  */
 class FileWriter extends AbstractWriter
 {
+
+    /**
+     * @var Logger
+     */
+    protected $logger;
+
     /**
      * Handle to the log file.
      *
@@ -30,34 +39,26 @@ class FileWriter extends AbstractWriter
     protected $fileHandle;
 
     /**
-     * FileWriter constructor.
+     * Constructs this log writer
      *
-     * @param Logger $logger
-     *
-     * @throws \UnexpectedValueException
+     * @param array $options Configuration options - depends on the actual log writer
+     * @throws \TYPO3\CMS\Core\Log\Exception\InvalidLogWriterConfigurationException
      */
-    public function __construct($logger)
+    public function __construct(array $options = [])
     {
-        parent::__construct($logger);
+        parent::__construct($options);
+        $this->logger = GeneralUtility::makeInstance(Logger::class);
         $configuration = $this->logger->getExtensionConfiguration();
         $absoluteFilePath = GeneralUtility::getFileAbsFileName(
-                $configuration->getLogFilePath()
+            $configuration->getLogFilePath()
         );
+
         // If the file path is valid, try opening the file
         $this->fileHandle = @fopen(
-                $absoluteFilePath,
-                'ab'
+            $absoluteFilePath,
+            'ab'
         );
-        // Throw an exception if log file could not be opened properly
-        if (!$this->fileHandle) {
-            throw new \UnexpectedValueException(
-                    sprintf(
-                            'Log file %s could not be opened.',
-                            $configuration->getLogFilePath()
-                    ),
-                    1416486470
-            );
-        }
+
     }
 
     /**
@@ -69,38 +70,47 @@ class FileWriter extends AbstractWriter
     }
 
     /**
-     * Writes the entry to the log file.
+     * Writes the log record
      *
-     * @param \Devlog\Devlog\Domain\Model\Entry $entry
-     * @return void
+     * @param LogRecord $record Log record
+     * @return \TYPO3\CMS\Core\Log\Writer\WriterInterface $this
+     * @throws \Exception
      */
-    public function write($entry)
+    public function writeLog(LogRecord $record)
     {
-        $logLine = '';
-        $logLine .= date('c', $entry->getCrdate());
-        switch ($entry->getSeverity()) {
-            case 0:
-                $severity = 'INFO';
-                break;
-            case 1:
-                $severity = 'NOTICE';
-                break;
-            case 2:
-                $severity = 'WARNING';
-                break;
-            case 3:
-                $severity = 'ERROR';
-                break;
-            default:
-                $severity = 'OK';
+        if (!$this->fileHandle) {
+            return $this;
         }
-        $logLine .= ' [' . $severity . ']';
-        $logLine .= ' ' . $entry->getMessage();
-        $logLine .= ' (' . $entry->getLocation() . ' ' . $entry->getLine() . ')';
-        $logLine .= "\n";
-        @fwrite(
+
+        if ($entry = $this->logger->getEntry($record)) {
+            $logLine = '';
+            $logLine .= date('c', $entry->getCrdate());
+            switch ($entry->getSeverity()) {
+                case 0:
+                    $severity = 'INFO';
+                    break;
+                case 1:
+                    $severity = 'NOTICE';
+                    break;
+                case 2:
+                    $severity = 'WARNING';
+                    break;
+                case 3:
+                    $severity = 'ERROR';
+                    break;
+                default:
+                    $severity = 'OK';
+            }
+            $logLine .= ' [' . $severity . ']';
+            $logLine .= ' ' . $entry->getMessage();
+            $logLine .= ' (' . $entry->getLocation() . ' ' . $entry->getLine() . ')';
+            $logLine .= "\n";
+            @fwrite(
                 $this->fileHandle,
                 $logLine
-        );
+            );
+        }
+        return $this;
     }
+
 }

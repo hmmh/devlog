@@ -17,6 +17,7 @@ namespace Devlog\Devlog\Utility;
 use Devlog\Devlog\Domain\Model\Entry;
 use Devlog\Devlog\Domain\Model\ExtensionConfiguration;
 use Devlog\Devlog\Writer\WriterInterface;
+use TYPO3\CMS\Core\Log\LogRecord;
 use TYPO3\CMS\Core\SingletonInterface;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
@@ -37,11 +38,6 @@ class Logger implements SingletonInterface
     protected $extensionConfiguration = null;
 
     /**
-     * @var array List of instances of each available log writer
-     */
-    protected $logWriters = array();
-
-    /**
      * @var bool Flag used to turn logging off
      */
     protected $isLoggingEnabled = true;
@@ -56,6 +52,11 @@ class Logger implements SingletonInterface
      */
     protected $counter = 0;
 
+    /**
+     * @var array Mapping core severities to devlog severities
+     */
+    protected $severityMappings = [3, 3, 3, 3, 2, 1, 0, 0];
+
     public function __construct()
     {
         // Read the extension configuration
@@ -63,75 +64,40 @@ class Logger implements SingletonInterface
 
         // Generate a unique ID, including the global timestamp
         $this->runId = $GLOBALS['EXEC_TIME'] . uniqid('.', true);
-
-        // Create a list of instances of each available log writer
-        foreach ($GLOBALS['TYPO3_CONF_VARS']['EXTCONF']['devlog']['writers'] as $logWriterClass) {
-            try {
-                $logWriter = GeneralUtility::makeInstance(
-                        $logWriterClass,
-                        $this
-                );
-                if ($logWriter instanceof WriterInterface) {
-                    $this->logWriters[] = $logWriter;
-                }
-            } catch (\Exception $e) {
-                // TODO: report somewhere that writer could not be instantiated (sys_log?)
-            }
-        }
     }
 
     /**
-     * Logs calls passed to \TYPO3\CMS\Core\Utility\GeneralUtility::devLog().
-     *
-     * $logData = array('msg'=>$msg, 'extKey'=>$extKey, 'severity'=>$severity, 'dataVar'=>$dataVar);
-     *        'msg'        string        Message (in english).
-     *        'extKey'    string        Extension key (from which extension you are calling the log)
-     *        'severity'    integer        Severity: 0 is info, 1 is notice, 2 is warning, 3 is fatal error, -1 is "OK" message
-     *        'dataVar'    array        Additional data you want to pass to the logger.
-     *
-     * @param array $logData Log data
-     * @return void
+     * @param LogRecord $record
+     * @return Entry|null
      */
-    public function log($logData)
+    public function getEntry(LogRecord $record)
     {
         // If logging is disabled, abort immediately
         if (!$this->isLoggingEnabled) {
-            return;
+            return null;
         }
-        // Add IP address for validation
-        $ipAddress = GeneralUtility::getIndpEnv('REMOTE_ADDR');
-        if ($ipAddress === null) {
-            $ipAddress = '';
-        }
-        $logData['ip'] = $ipAddress;
-        // If the log entry doesn't pass the basic filters, exit early doing nothing
-        if (!$this->isEntryAccepted($logData)) {
-            return;
-        }
-        // Disable logging while inside the devlog, to avoid recursive calls
-        $this->isLoggingEnabled = false;
 
         // Create an entry and fill it with data
         /** @var Entry $entry */
         $entry = GeneralUtility::makeInstance(Entry::class);
-        $entry->setRunId(
-                $this->runId
-        );
-        $entry->setSorting(
-                $this->counter
-        );
+        $entry->setIp(GeneralUtility::getIndpEnv('REMOTE_ADDR')?:'');
+        $entry->setExtkey($this->getExtensionKeyFromComponent($record->getComponent()));
+        $entry->setSeverity($this->severityMappings[$record->getLevel()]);
+
+        // If the log entry doesn't pass the basic filters, exit early doing nothing
+        if (!$this->isEntryAccepted($entry)) {
+            return null;
+        }
+
+        // Disable logging while inside the devlog, to avoid recursive calls
+        $this->isLoggingEnabled = false;
+
+        $entry->setRunId($this->runId);
+        $entry->setSorting($this->counter);
         $this->counter++;
         $entry->setCrdate(time());
-        $entry->setMessage(
-                $logData['msg']
-        );
-        $entry->setExtkey(
-                strip_tags($logData['extKey'])
-        );
-        $entry->setSeverity(
-                (int)$logData['severity']
-        );
-        $entry->setExtraData($logData['dataVar']);
+        $entry->setMessage($record->getMessage());
+        $entry->setExtraData($record->getData());
 
         // Try to get a page id that makes sense
         $pid = 0;
@@ -152,9 +118,6 @@ class Logger implements SingletonInterface
         $entry->setCruserId(
                 (isset($GLOBALS['BE_USER']->user['uid'])) ? $GLOBALS['BE_USER']->user['uid'] : 0
         );
-        $entry->setIp(
-                $logData['ip']
-        );
 
         // Get information about the place where this method was called from
         try {
@@ -165,40 +128,37 @@ class Logger implements SingletonInterface
             // Do nothing
         }
 
-        // Loop on all writers to output the log entry to some backend
-        /** @var \Devlog\Devlog\Writer\WriterInterface $logWriter */
-        foreach ($this->logWriters as $logWriter) {
-            $logWriter->write($entry);
-        }
         $this->isLoggingEnabled = true;
+
+        return $entry;
     }
 
     /**
      * Checks whether the given log data passes the filters or not.
      *
-     * @param array $logData Log information
+     * @param $entry Entry
      * @return bool
      */
-    public function isEntryAccepted($logData)
+    public function isEntryAccepted($entry)
     {
         // Skip entry if severity is below minimum level
-        if ($logData['severity'] < $this->extensionConfiguration->getMinimumLogLevel()) {
+        if ($entry->getSeverity() < $this->extensionConfiguration->getMinimumLogLevel()) {
             return false;
         }
         // Check excluded list only if included list is empty
         // (if included list is defined, it supersedes excluded list)
         $includedList = $this->extensionConfiguration->getIncludeKeys();
         if ($includedList === '') {
-            if (GeneralUtility::inList($this->extensionConfiguration->getExcludeKeys(), $logData['extKey'])) {
+            if (GeneralUtility::inList($this->extensionConfiguration->getExcludeKeys(), $entry->getExtkey())) {
                 return false;
             }
         } else {
-            if (!GeneralUtility::inList($includedList, $logData['extKey'])) {
+            if (!GeneralUtility::inList($includedList, $entry->getExtkey())) {
                 return false;
             }
         }
         // Skip entry if referrer does not match IP mask
-        if (!$this->isIpAddressAccepted($logData['ip'])) {
+        if (!$this->isIpAddressAccepted($entry->getIp())) {
             return false;
         }
         return true;
@@ -230,7 +190,10 @@ class Logger implements SingletonInterface
     {
         $backTrace = debug_backtrace();
         foreach ($backTrace as $entry) {
-            if ($entry['function'] === 'devLog') {
+            if (in_array($entry['function'], ['log', 'emergency', 'alert', 'critical', 'error', 'warning', 'notice', 'info', 'debug'])
+                && $entry['class'] === \TYPO3\CMS\Core\Log\Logger::class
+                && stripos($entry['file'], 'Logger.php') === false
+            ) {
                 $pathInfo = pathinfo($entry['file']);
                 $pathInfo['line'] = $entry['line'];
                 return $pathInfo;
@@ -284,5 +247,15 @@ class Logger implements SingletonInterface
     public function setIsLoggingEnabled($flag)
     {
         $this->isLoggingEnabled = (bool)$flag;
+    }
+
+    /**
+     * @param string $component
+     * @return string
+     */
+    protected function getExtensionKeyFromComponent($component) {
+        $key = str_ireplace('TYPO3.CMS', 'TYPO3CMS' , strip_tags($component));
+        $key = explode('.', $key, 3)[1];
+        return GeneralUtility::camelCaseToLowerCaseUnderscored($key);
     }
 }

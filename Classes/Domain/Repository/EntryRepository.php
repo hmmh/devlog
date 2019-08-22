@@ -16,7 +16,10 @@ namespace Devlog\Devlog\Domain\Repository;
 
 use Devlog\Devlog\Domain\Model\ExtensionConfiguration;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
+use TYPO3\CMS\Core\Database\ConnectionPool;
+use TYPO3\CMS\Core\Database\Query\QueryBuilder;
 use TYPO3\CMS\Core\SingletonInterface;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
  * The repository for DevLog Entries.
@@ -61,12 +64,7 @@ class EntryRepository implements SingletonInterface
      */
     public function __construct()
     {
-        if ($this->getDatabaseConnection() === null) {
-            throw new \UnexpectedValueException(
-                    'Database connection could not be established',
-                    1518984773
-            );
-        }
+
     }
 
     /**
@@ -80,18 +78,16 @@ class EntryRepository implements SingletonInterface
     public function findAll()
     {
         try {
-            $entries = $this->getDatabaseConnection()->exec_SELECTgetRows(
-                    '*',
-                    $this->databaseTable,
-                    '',
-                    '',
-                    'crdate DESC, sorting ASC'
-            );
+            $entries = $this->getQueryBuilder()
+                ->select('*')
+                ->from($this->databaseTable)
+                ->orderBy('crdate', 'DESC')
+                ->addOrderBy('sorting', 'ASC')
+                ->execute()->fetchAll();
         } catch (\Exception $e) {
             $entries = array();
         }
-        $entries = $this->expandEntryData($entries);
-        return $entries;
+        return $this->expandEntryData($entries);
     }
 
     /**
@@ -103,13 +99,14 @@ class EntryRepository implements SingletonInterface
     public function findAfterDate($timestamp)
     {
         try {
-            $entries = $this->getDatabaseConnection()->exec_SELECTgetRows(
-                    '*',
-                    $this->databaseTable,
-                    'crdate >= ' . (int)$timestamp,
-                    '',
-                    'crdate DESC, sorting ASC'
-            );
+            $queryBuilder = $this->getQueryBuilder();
+            $entries = $queryBuilder
+                ->select('*')
+                ->from($this->databaseTable)
+                ->where($queryBuilder->expr()->gte('crdate', $queryBuilder->createNamedParameter($timestamp, \PDO::PARAM_INT)))
+                ->orderBy('crdate', 'DESC')
+                ->addOrderBy('sorting', 'ASC')
+                ->execute()->fetchAll();
         } catch (\Exception $e) {
             $entries = array();
         }
@@ -126,16 +123,14 @@ class EntryRepository implements SingletonInterface
     public function findByKey($key)
     {
         try {
-            $entries = $this->getDatabaseConnection()->exec_SELECTgetRows(
-                    '*',
-                    $this->databaseTable,
-                    'extkey = ' . $this->getDatabaseConnection()->fullQuoteStr(
-                            $key,
-                            $this->databaseTable
-                    ),
-                    '',
-                    'crdate DESC, sorting ASC'
-            );
+            $queryBuilder = $this->getQueryBuilder();
+            $entries = $queryBuilder
+                ->select('*')
+                ->from($this->databaseTable)
+                ->where($this->getQueryBuilder()->expr()->eq('extkey', $queryBuilder->createNamedParameter($key)))
+                ->orderBy('crdate', 'DESC')
+                ->addOrderBy('sorting', 'ASC')
+                ->execute()->fetchAll();
         } catch (\Exception $e) {
             $entries = array();
         }
@@ -152,13 +147,13 @@ class EntryRepository implements SingletonInterface
     {
         $count = array();
         try {
-            $rows = $this->getDatabaseConnection()->exec_SELECTgetRows(
-                    'extkey, COUNT(uid) AS total',
-                    $this->databaseTable,
-                    '',
-                    'extkey',
-                    'extkey'
-            );
+            $rows = $this->getQueryBuilder()
+                ->select('extkey')
+                ->addSelectLiteral($this->getQueryBuilder()->expr()->count('uid', 'total'))
+                ->from($this->databaseTable)
+                ->groupBy('extkey')
+                ->orderBy('extkey')
+                ->execute()->fetchAll();
             if (is_array($rows)) {
                 /** @var array $rows */
                 foreach ($rows as $row) {
@@ -188,16 +183,17 @@ class EntryRepository implements SingletonInterface
                 '1year' => 0
         );
         try {
-            $now = time();
-            $rows = $this->getDatabaseConnection()->exec_SELECTgetRows(
-                    '(' . $now . ' - crdate) AS age',
-                    $this->databaseTable,
-                    ''
-            );
+            $rows = $this->getQueryBuilder()
+                ->select( 'crdate')
+                ->from($this->databaseTable)
+                ->execute()->fetchAll();
+
             if (is_array($rows)) {
+                $now = time();
                 /** @var array $rows */
                 foreach ($rows as $row) {
-                    if ($row['age'] >= self::PERIOD_1YEAR) {
+                    $age = $now - $row['crdate'];
+                    if ($age >= self::PERIOD_1YEAR) {
                         $count['1hour']++;
                         $count['1day']++;
                         $count['1week']++;
@@ -205,32 +201,32 @@ class EntryRepository implements SingletonInterface
                         $count['3months']++;
                         $count['6months']++;
                         $count['1year']++;
-                    } elseif ($row['age'] >= self::PERIOD_6MONTHS) {
+                    } elseif ($age >= self::PERIOD_6MONTHS) {
                         $count['1hour']++;
                         $count['1day']++;
                         $count['1week']++;
                         $count['1month']++;
                         $count['3months']++;
                         $count['6months']++;
-                    } elseif ($row['age'] >= self::PERIOD_3MONTHS) {
+                    } elseif ($age >= self::PERIOD_3MONTHS) {
                         $count['1hour']++;
                         $count['1day']++;
                         $count['1week']++;
                         $count['1month']++;
                         $count['3months']++;
-                    } elseif ($row['age'] >= self::PERIOD_1MONTH) {
+                    } elseif ($age >= self::PERIOD_1MONTH) {
                         $count['1hour']++;
                         $count['1day']++;
                         $count['1week']++;
                         $count['1month']++;
-                    } elseif ($row['age'] >= self::PERIOD_1WEEK) {
+                    } elseif ($age >= self::PERIOD_1WEEK) {
                         $count['1hour']++;
                         $count['1day']++;
                         $count['1week']++;
-                    } elseif ($row['age'] >= self::PERIOD_1DAY) {
+                    } elseif ($age >= self::PERIOD_1DAY) {
                         $count['1hour']++;
                         $count['1day']++;
-                    } elseif ($row['age'] >= self::PERIOD_1HOUR) {
+                    } elseif ($age >= self::PERIOD_1HOUR) {
                         $count['1hour']++;
                     }
                 }
@@ -266,21 +262,21 @@ class EntryRepository implements SingletonInterface
         $extraData = $entry->getExtraData();
         // NOTE: GeneralUtility::devLog() sends "false" if extra data is undefined
         if ($extraData) {
-            $fields['extra_data'] = gzcompress(serialize($extraData));
-            $extraDataSize = strlen($fields['extra_data']);
-            $maximumExtraDataSize = $this->extensionConfiguration->getMaximumExtraDataSize();
-            // If the entry's extra data is above the limit, replace it with a warning
-            if (!empty($maximumExtraDataSize) && $extraDataSize > $maximumExtraDataSize) {
-                $fields['extra_data'] = gzcompress(serialize('Extra data too large, not saved.'));
+            try {
+                $fields['extra_data'] = gzcompress(serialize($extraData));
+                $extraDataSize = strlen($fields['extra_data']);
+                $maximumExtraDataSize = $this->extensionConfiguration->getMaximumExtraDataSize();
+                // If the entry's extra data is above the limit, replace it with a warning
+                if (!empty($maximumExtraDataSize) && $extraDataSize > $maximumExtraDataSize) {
+                    $fields['extra_data'] = gzcompress(serialize('Extra data too large, not saved.'));
+                }
+            } catch (\Exception $e) {
+                $fields['extra_data'] = gzcompress(serialize('Extra data could not be serialized.'));
             }
         } else {
             $fields['extra_data'] = '';
         }
-
-        return $this->getDatabaseConnection()->exec_INSERTquery(
-                $this->databaseTable,
-                $fields
-        );
+        return $this->getQueryBuilder()->insert($this->databaseTable)->values($fields)->execute();
     }
 
     /**
@@ -292,11 +288,13 @@ class EntryRepository implements SingletonInterface
     {
         // Get the total number of rows, if not already defined
         if ($this->numberOfRows === null) {
-            $this->numberOfRows = $this->getDatabaseConnection()->exec_SELECTcountRows(
-                    'uid',
-                    'tx_devlog_domain_model_entry'
-            );
+            $this->numberOfRows = $this->getQueryBuilder()
+                ->count('uid')
+                ->from($this->databaseTable)
+                ->execute()
+                ->fetchColumn(0);
         }
+
         // Check if number of rows is above the limit and clean up if necessary
         if ($this->numberOfRows > $this->extensionConfiguration->getMaximumRows()) {
             // Select the row from which to start cleaning up
@@ -304,29 +302,27 @@ class EntryRepository implements SingletonInterface
             // then offset by 10% of maximumRows and get the next record
             // This will return a timestamp that is used as a cut-off date
             $numberOfRowsToRemove = round(0.1 * $this->extensionConfiguration->getMaximumRows());
-            $cutOffRow = $this->getDatabaseConnection()->exec_SELECTgetRows(
-                    'crdate',
-                    'tx_devlog_domain_model_entry',
-                    '',
-                    '',
-                    'crdate',
-                    $numberOfRowsToRemove . ',1'
-            );
-            $cutOffDate = $cutOffRow[0]['crdate'];
+            $cutOffDate = $this->getQueryBuilder()
+                ->select('crdate', 'uid')
+                ->from($this->databaseTable)
+                ->orderBy('crdate')
+                ->setMaxResults(1)
+                ->setFirstResult($numberOfRowsToRemove)
+                ->execute()
+                ->fetchColumn(0);
+
             // Delete all rows older or same age as previously found timestamp
             // This will probably delete a bit more than 10% of maximumRows, but will at least
             // delete complete log runs
-            $this->getDatabaseConnection()->exec_DELETEquery(
-                    'tx_devlog_domain_model_entry',
-                    'crdate <= \'' . $cutOffDate . '\''
-            );
-            $numberOfRemovedRows = $this->getDatabaseConnection()->sql_affected_rows();
+            $queryBuilder = $this->getQueryBuilder();
+            $numberOfRemovedRows =  $queryBuilder
+                ->delete($this->databaseTable)
+                ->where($queryBuilder->expr()->lte('crdate', $queryBuilder->createNamedParameter($cutOffDate)))
+                ->execute();
+
             // Update (cached) number of rows
             $this->numberOfRows -= $numberOfRemovedRows;
-            // Optimize the table (if option is active)
-            if ($this->extensionConfiguration->getOptimizeTable()) {
-                $this->getDatabaseConnection()->sql_query('OPTIMIZE table tx_devlog_domain_model_entry');
-            }
+
         }
 
     }
@@ -338,13 +334,7 @@ class EntryRepository implements SingletonInterface
      */
     public function deleteAll()
     {
-        // Since we use TRUNCATE, count the number of records first, to return as number of deleted records
-        $deleted = $this->getDatabaseConnection()->exec_SELECTcountRows(
-                'uid',
-                $this->databaseTable
-        );
-        $this->getDatabaseConnection()->exec_TRUNCATEquery($this->databaseTable);
-        return $deleted;
+        return $this->getQueryBuilder()->delete($this->databaseTable)->execute();
     }
 
     /**
@@ -355,14 +345,10 @@ class EntryRepository implements SingletonInterface
      */
     public function deleteByKey($key)
     {
-        $this->getDatabaseConnection()->exec_DELETEquery(
-                $this->databaseTable,
-                'extkey = ' . $this->getDatabaseConnection()->fullQuoteStr(
-                        $key,
-                        $this->databaseTable
-                )
-        );
-        return $this->getDatabaseConnection()->sql_affected_rows();
+        $queryBuilder = $this->getQueryBuilder();
+        return $queryBuilder->delete($this->databaseTable)
+            ->where($queryBuilder->expr()->eq('extkey', $queryBuilder->createNamedParameter($key)))
+            ->execute();
     }
 
     /**
@@ -373,11 +359,10 @@ class EntryRepository implements SingletonInterface
      */
     public function deleteByPeriod($period)
     {
-        $this->getDatabaseConnection()->exec_DELETEquery(
-                $this->databaseTable,
-                'crdate <= ' . (time() - (int)$period)
-        );
-        return $this->getDatabaseConnection()->sql_affected_rows();
+        $queryBuilder = $this->getQueryBuilder();
+        return $queryBuilder->delete($this->databaseTable)
+            ->where($queryBuilder->expr()->lte('crdate', time() - (int)$period))
+            ->execute();
     }
 
     /**
@@ -429,7 +414,7 @@ class EntryRepository implements SingletonInterface
                 } else {
                     try {
                         $extraData = gzuncompress($entries[$i]['extra_data']);
-                        $extraData = htmlspecialchars(var_export(unserialize($extraData), true));
+                        $extraData = htmlspecialchars(json_encode(unserialize($extraData), JSON_PRETTY_PRINT));
                     } catch (\Exception $e) {
                         $extraData = $e->getMessage();
                     }
@@ -448,18 +433,17 @@ class EntryRepository implements SingletonInterface
      */
     protected function findAllUsers()
     {
+        $users = [];
         try {
-            $users = $this->getDatabaseConnection()->exec_SELECTgetRows(
-                    'uid, username',
-                    'be_users',
-                    '',
-                    '',
-                    '',
-                    '',
-                    'uid'
-            );
+            $records = $this->getQueryBuilder('be_users')
+                ->select('uid', 'username')
+                ->from('be_users')
+                ->execute()->fetchAll();
+            foreach ($records as $record) {
+                $users[$record['uid']] = $record;
+            }
         } catch (\Exception $e) {
-            $users = array();
+            // Let an empty array return
         }
         return $users;
     }
@@ -477,12 +461,11 @@ class EntryRepository implements SingletonInterface
     }
 
     /**
-     * Wrapper around the global database object.
-     *
-     * @return \TYPO3\CMS\Core\Database\DatabaseConnection
+     * @param string $table
+     * @return QueryBuilder
      */
-    protected function getDatabaseConnection()
+    protected function getQueryBuilder($table = null)
     {
-        return $GLOBALS['TYPO3_DB'];
+        return GeneralUtility::makeInstance(ConnectionPool::class)->getQueryBuilderForTable($table?:$this->databaseTable);
     }
 }

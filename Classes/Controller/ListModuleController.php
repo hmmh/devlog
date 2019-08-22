@@ -23,6 +23,7 @@ use TYPO3\CMS\Backend\Template\Components\ButtonBar;
 use TYPO3\CMS\Backend\Template\Components\Menu\Menu;
 use TYPO3\CMS\Backend\Template\Components\Menu\MenuItem;
 use TYPO3\CMS\Backend\View\BackendTemplateView;
+use TYPO3\CMS\Core\Http\JsonResponse;
 use TYPO3\CMS\Core\Imaging\Icon;
 use TYPO3\CMS\Core\Messaging\AbstractMessage;
 use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
@@ -122,7 +123,7 @@ class ListModuleController extends ActionController
         }
         $pageRenderer = $view->getModuleTemplate()->getPageRenderer();
         $pageRenderer->addCssFile(
-                ExtensionManagementUtility::extRelPath('devlog') . 'Resources/Public/StyleSheet/Devlog.css'
+            ExtensionManagementUtility::extPath('devlog', 'Resources/Public/StyleSheet/Devlog.css')
         );
         $pageRenderer->loadRequireJsModule('TYPO3/CMS/Devlog/ListModule');
         $pageRenderer->addInlineSettingArray(
@@ -260,28 +261,26 @@ class ListModuleController extends ActionController
      * Returns the list of all log entries, in JSON format.
      *
      * @param ServerRequestInterface $request
-     * @param ResponseInterface $response
      * @return ResponseInterface
      */
-    public function getAllAction(ServerRequestInterface $request, ResponseInterface $response)
+    public function getAllAction(ServerRequestInterface $request): ResponseInterface
     {
         $this->initializeForAjaxAction();
 
         // Get all the entries and make them into an array for JSON encoding
         $entries = $this->entryRepository->findAll();
+
         // Send the response
-        $response->getBody()->write(json_encode($entries));
-        return $response;
+        return (new JsonResponse())->setPayload($entries);
     }
 
     /**
      * Returns the list of all log entries after a given timestamp.
      *
      * @param ServerRequestInterface $request
-     * @param ResponseInterface $response
      * @return ResponseInterface
      */
-    public function getNewAction(ServerRequestInterface $request, ResponseInterface $response)
+    public function getNewAction(ServerRequestInterface $request): ResponseInterface
     {
         $this->initializeForAjaxAction();
         $requestParameters = $request->getQueryParams();
@@ -290,20 +289,20 @@ class ListModuleController extends ActionController
         $entries = $this->entryRepository->findAfterDate(
                 $requestParameters['timestamp']
         );
+
         // Send the response
-        $response->getBody()->write(json_encode($entries));
-        return $response;
+        return (new JsonResponse())->setPayload($entries);
     }
 
     /**
      * Returns a count of log entries, based on various grouping criteria, in JSON format.
      *
      * @param ServerRequestInterface $request
-     * @param ResponseInterface $response
      * @return ResponseInterface
      */
-    public function getCountAction(ServerRequestInterface $request, ResponseInterface $response)
+    public function getCountAction(ServerRequestInterface $request): ResponseInterface
     {
+
         $this->initializeForAjaxAction();
 
         $countByKey = $this->entryRepository->countByKey();
@@ -315,7 +314,6 @@ class ListModuleController extends ActionController
         );
 
         // Send the response
-        $response->getBody()->write(json_encode($counts));
-        return $response;
+        return (new JsonResponse())->setPayload($counts);
     }
 }

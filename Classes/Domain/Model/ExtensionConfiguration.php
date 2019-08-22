@@ -83,13 +83,6 @@ class ExtensionConfiguration implements SingletonInterface
     protected $maximumRows = 1000;
 
     /**
-     * optimizeTable
-     *
-     * @var bool
-     */
-    protected $optimizeTable = true;
-
-    /**
      * Maximum extra data size
      *
      * @var int
@@ -278,27 +271,6 @@ class ExtensionConfiguration implements SingletonInterface
     public function setMaximumRows($maximumRows)
     {
         $this->maximumRows = (int)$maximumRows;
-    }
-
-    /**
-     * Returns the optimizeTable.
-     *
-     * @return bool $optimizeTable
-     */
-    public function getOptimizeTable()
-    {
-        return $this->optimizeTable;
-    }
-
-    /**
-     * Sets the optimizeTable.
-     *
-     * @param bool $optimizeTable
-     * @return void
-     */
-    public function setOptimizeTable($optimizeTable)
-    {
-        $this->optimizeTable = (bool)$optimizeTable;
     }
 
     /**

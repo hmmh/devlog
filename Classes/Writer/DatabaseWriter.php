@@ -14,9 +14,10 @@ namespace Devlog\Devlog\Writer;
  * The TYPO3 project - inspiring people to share!
  */
 
-use Devlog\Devlog\Domain\Model\Entry;
 use Devlog\Devlog\Domain\Repository\EntryRepository;
 use Devlog\Devlog\Utility\Logger;
+use TYPO3\CMS\Core\Log\LogRecord;
+use TYPO3\CMS\Core\Log\Writer\AbstractWriter;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
@@ -24,24 +25,31 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
  */
 class DatabaseWriter extends AbstractWriter
 {
+
+    /**
+     * @var Logger
+     */
+    protected $logger;
+
     /**
      * @var EntryRepository
      */
     protected $entryRepository;
 
     /**
-     * DatabaseWriter constructor.
+     * Constructs this log writer
      *
-     * @param Logger $logger
-     * @throws \UnexpectedValueException
+     * @param array $options Configuration options - depends on the actual log writer
+     * @throws \TYPO3\CMS\Core\Log\Exception\InvalidLogWriterConfigurationException
      */
-    public function __construct($logger)
+    public function __construct(array $options = [])
     {
-        parent::__construct($logger);
+        parent::__construct($options);
         try {
+            $this->logger = GeneralUtility::makeInstance(Logger::class);
             $this->entryRepository = GeneralUtility::makeInstance(EntryRepository::class);
             $this->entryRepository->setExtensionConfiguration(
-                    $this->logger->getExtensionConfiguration()
+                $this->logger->getExtensionConfiguration()
             );
         }
         catch (\Exception $e) {
@@ -57,14 +65,19 @@ class DatabaseWriter extends AbstractWriter
     }
 
     /**
-     * Writes the entry to the DB storage.
+     * Writes the log record
      *
-     * @param Entry $entry
-     * @return void
+     * @param LogRecord $record Log record
+     * @return \TYPO3\CMS\Core\Log\Writer\WriterInterface $this
+     * @throws \Exception
      */
-    public function write($entry)
+    public function writeLog(LogRecord $record)
     {
-        $this->entryRepository->add($entry);
-        $this->entryRepository->cleanUp();
+        if ($entry = $this->logger->getEntry($record)) {
+            $this->entryRepository->add($entry);
+            $this->entryRepository->cleanUp();
+        }
+        return $this;
     }
+
 }
