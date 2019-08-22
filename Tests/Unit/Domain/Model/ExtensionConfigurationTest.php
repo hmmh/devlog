@@ -225,30 +225,6 @@ class ExtensionConfigurationTest extends UnitTestCase
     /**
      * @test
      */
-    public function getOptimizeTableInitiallyReturnsTrue() {
-        self::assertTrue(
-                $this->subject->getOptimizeTable()
-        );
-    }
-
-    /**
-     * @test
-     * @param $input
-     * @param $expected
-     * @dataProvider booleanProvider
-     */
-    public function setOptimizeTableSetsOptimizeFlag($input, $expected)
-    {
-        $this->subject->setOptimizeTable($input);
-        self::assertSame(
-                $expected,
-                $this->subject->getOptimizeTable()
-        );
-    }
-
-    /**
-     * @test
-     */
     public function getMaximumExtraDataSizeInitiallyReturnsDefaultValue() {
         self::assertSame(
                 1000000,
