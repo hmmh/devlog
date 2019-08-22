@@ -12,7 +12,7 @@
 
 $EM_CONF[$_EXTKEY] = [
         'title' => 'Developer\'s Log',
-        'description' => 'The Developer\'s Log extension provides development logging/debugging functionality for usage of GeneralUtility::devlog() and a BE module to browse the logs.',
+        'description' => 'The Developer\'s Log extension provides development logging/debugging functionality and a BE module to browse the logs.',
         'category' => 'misc',
         'priority' => '',
         'loadOrder' => '',
@@ -29,7 +29,7 @@ $EM_CONF[$_EXTKEY] = [
         'version' => '4.0.0',
         'constraints' => [
                 'depends' => [
-                        'typo3' => '7.6.0-9.9.99',
+                        'typo3' => '8.7.0-9.9.99',
                 ],
                 'conflicts' => [
                 ],
