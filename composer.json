@@ -20,7 +20,7 @@
 		"typo3/cms-core": ">=9.5.0,<10.0"
 	},
 	"replace": {
-		"devlog": "self.version",
+		"devlog/devlog": "self.version",
 		"typo3-ter/devlog": "self.version"
 	}
 }
