@@ -95,13 +95,6 @@ class Entry extends AbstractEntity
     protected $cruserId = 0;
 
     /**
-     * Page where the data was logged (if applicable).
-     *
-     * @var int
-     */
-    protected $pid = 0;
-
-    /**
      * extraData
      *
      * @var mixed
@@ -308,22 +301,6 @@ class Entry extends AbstractEntity
     public function setCruserId($cruserId)
     {
         $this->cruserId = $cruserId;
-    }
-
-    /**
-     * @return int
-     */
-    public function getPid()
-    {
-        return $this->pid;
-    }
-
-    /**
-     * @param int $pid
-     */
-    public function setPid($pid)
-    {
-        $this->pid = $pid;
     }
 
     /**
