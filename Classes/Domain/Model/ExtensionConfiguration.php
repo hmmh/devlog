@@ -104,7 +104,7 @@ class ExtensionConfiguration implements SingletonInterface
     public function __construct()
     {
         // Get global configuration
-        $this->configurationArray = unserialize($GLOBALS['TYPO3_CONF_VARS']['EXT']['extConf']['devlog']);
+        $this->configurationArray = $GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['devlog'];
         if (is_array($this->configurationArray)) {
             // Call setter method foreach configuration entry
             foreach ($this->configurationArray as $key => $value) {
