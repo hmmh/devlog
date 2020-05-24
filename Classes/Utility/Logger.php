@@ -17,6 +17,7 @@ namespace Devlog\Devlog\Utility;
 use Devlog\Devlog\Domain\Model\Entry;
 use Devlog\Devlog\Domain\Model\ExtensionConfiguration;
 use Devlog\Devlog\Writer\WriterInterface;
+use Psr\Log\LogLevel;
 use TYPO3\CMS\Core\Log\LogRecord;
 use TYPO3\CMS\Core\SingletonInterface;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
@@ -55,7 +56,16 @@ class Logger implements SingletonInterface
     /**
      * @var array Mapping core severities to devlog severities
      */
-    protected $severityMappings = [3, 3, 3, 3, 2, 1, 0, 0];
+    protected $severityMappings = [
+        LogLevel::EMERGENCY => 3,
+        LogLevel::ALERT => 3,
+        LogLevel::CRITICAL => 3,
+        LogLevel::ERROR => 3,
+        LogLevel::WARNING => 2,
+        LogLevel::NOTICE => 1,
+        LogLevel::INFO => 0,
+        LogLevel::DEBUG => 0
+    ];
 
     public function __construct()
     {
